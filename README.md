@@ -13,7 +13,7 @@ streamlit run [filename.py]
 
 以下のファイルはpygameで構成されています。
 
--chess.py
+- chess.py
 
 実行時には以下のコマンドを入力してください。
 
