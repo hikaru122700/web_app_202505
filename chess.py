@@ -1,3 +1,5 @@
+# testです。次の差分で削除してください。
+
 import pygame
 import sys
 import os
