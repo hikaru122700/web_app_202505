@@ -48,11 +48,11 @@ git commit -m "メッセージ"
 git push origin main
 ```
 
-最新のmainブランチの内容を取得したいときは以下を実行
+---
+
+最新のmainブランチの内容を取得したいとき
 
 以下のエラーメッセージが出たとき
-
-
 
 ```bash
 ! [rejected]        main -> main (fetch first)
