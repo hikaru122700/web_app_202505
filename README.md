@@ -49,12 +49,14 @@ git commit -m "メッセージ"
 
 以下のエラーメッセージが出たとき
 
-もしくは最新のmainブランチの内容を取得したいときは以下を実行
+
 
 ```bash
 ! [rejected]        main -> main (fetch first)
 Updates were rejected because the remote contains work that you do not have locally
 ```
+
+もしくは最新のmainブランチの内容を取得したいときは以下を実行
 
 ```bash
 git pull origin main
