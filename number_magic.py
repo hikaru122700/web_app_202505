@@ -4,25 +4,6 @@ import base64
 
 
 st.title("数当てゲーム (Guess the Number)")
-# 背景画像をローカルファイルから設定する関数
-def add_bg_from_local(image_path):
-    with open(image_path, "rb") as img_file:
-        b64 = base64.b64encode(img_file.read()).decode()
-    st.markdown(
-        f"""
-        <style>
-        .stApp {
-            background-image: url("data:image/png;base64,{b64}");
-            background-size: cover;
-            background-position: center;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-# 実行時に背景を設定（画像パスは適宜変更）
-add_bg_from_local("/data/Gemini_Generated_Image_sylbb3sylbb3sylb.png")
 
 # ゲームの初期化
 def init_game():
