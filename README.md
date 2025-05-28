@@ -44,13 +44,18 @@ git commit -m "メッセージ"
 
 ”メッセージ”の部分はどのような変更をしたのかわかるように記述してください
 
-その後、以下のプロンプトを入力すると更新が完了します。
-
-```bash
-git push origin main
-```
 
 最新のmainブランチの内容を取得したいときは以下を実行
+
+以下のエラーメッセージが出たとき
+
+もしくは最新のmainブランチの内容を取得したいときは以下を実行
+
+```bash
+! [rejected]        main -> main (fetch first)
+Updates were rejected because the remote contains work that you do not have locally
+```
+
 ```bash
 git pull origin main
 ```
