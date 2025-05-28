@@ -48,3 +48,8 @@ git commit -m "メッセージ"
 ```bash
 git push origin main
 ```
+
+最新のmainブランチの内容を取得したいときは以下を実行
+```bash
+git pull origin main
+```
