@@ -30,6 +30,7 @@ pygame chess.py
 
 ```bash
 git clone https://github.com/hikaru122700/web_app_202505.git
+cd .\web_app_202505
 ```
 
 クローンされた環境で開発を行います。実行するにはクローンされた環境を信頼することが必要です。
