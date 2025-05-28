@@ -18,7 +18,7 @@ streamlit run [filename.py]
 実行時には以下のコマンドを入力してください。
 
 ```bash
-pygame chess.py
+python chess.py
 ```
 
 # 開発手順
