@@ -624,7 +624,7 @@ def run_chess_game():
     while running:
         # AI: CPUのターン処理
         if not game.game_over and game.turn == 'b':
-            pygame.time.wait(500)
+            pygame.time.wait(1000)
             game.cpu_play_turn()
             selected = None
             selected_empty_square = None
