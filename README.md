@@ -25,6 +25,7 @@ pygame chess.py
 分からないことは三輪に聞いてください
 
 初回のみ、自分のパソコンにクローンします。
+どの階層で作業をするのか慎重に決めてください
 
 ```bash
 git clone https://github.com/hikaru122700/web_app_202505.git
