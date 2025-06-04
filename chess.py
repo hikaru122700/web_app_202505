@@ -719,6 +719,7 @@ def run_chess_game():
     BLACK_TEXT = (0, 0, 0)
     GRAY_OVERLAY = (100, 100, 100, 128)
     UI_BACKGROUND_COLOR = (50, 50, 50)
+    MOVE_HIGHLIGHT = (144, 238, 144, 160)  # Light green with transparency
 
     # フォント設定
     pygame.font.init()
@@ -822,9 +823,15 @@ def run_chess_game():
                 piece = game.board[row][col]
                 if piece:
                     screen.blit(pieces[piece], (col*SQUARE_SIZE + BOARD_OFFSET_X, row*SQUARE_SIZE + BOARD_OFFSET_Y))
-        
-        # 選択中の駒
+        # 駒が選択されている場合は移動可能マスをハイライト
         if selected and not game.game_over:
+            for er in range(game.ROWS):
+                for ec in range(game.COLS):
+                    if game.is_valid_move(selected, (er, ec)):
+                        highlight_surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+                        highlight_surface.fill(MOVE_HIGHLIGHT)
+                        screen.blit(highlight_surface, (ec*SQUARE_SIZE + BOARD_OFFSET_X, er*SQUARE_SIZE + BOARD_OFFSET_Y))
+
             pygame.draw.rect(screen, GREEN, (selected[1]*SQUARE_SIZE + BOARD_OFFSET_X, selected[0]*SQUARE_SIZE + BOARD_OFFSET_Y, SQUARE_SIZE, SQUARE_SIZE), 3)
         
         # 選択中の空マス
