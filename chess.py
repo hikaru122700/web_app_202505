@@ -381,13 +381,39 @@ class ChessGame:
             self.end_turn()
             return
 
-        chosen_action = random.choice(possible_actions)
+        # --- CPUの簡易評価 ---
+        best_actions = []
+        best_score = -1
+
+        for action in possible_actions:
+            score = 0
+            if action['type'] == 'move':
+                er, ec = action['end']
+                target = self.board[er][ec]
+                if target:
+                    piece_type = target[1]
+                    if piece_type == 'k':
+                        score = 100
+                    else:
+                        score = self.piece_rewards.get(piece_type, 0)
+            elif action['type'] == 'class_change':
+                score = 5
+            elif action['type'] == 'hire':
+                score = 2
+            elif action['type'] == 'buy':
+                score = 1
+
+            if score > best_score:
+                best_score = score
+                best_actions = [action]
+            elif score == best_score:
+                best_actions.append(action)
+
+        chosen_action = random.choice(best_actions)
         self.add_log_message(f"CPU chooses: {chosen_action['type']}")
 
-        reward_for_cpu = 0
-
         if chosen_action['type'] == 'move':
-            reward_for_cpu = self.move_piece(chosen_action['start'], chosen_action['end'])
+            self.move_piece(chosen_action['start'], chosen_action['end'])
         elif chosen_action['type'] == 'buy':
             self.buy_piece(chosen_action['option'], chosen_action['target_pos'])
         elif chosen_action['type'] == 'hire':
