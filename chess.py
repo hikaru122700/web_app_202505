@@ -1,9 +1,251 @@
-# testです。次の差分で削除してください。
-
 import pygame
 import sys
 import os
 import random
+import time
+
+# --- Monte Carlo simulation helper ---
+class SimGame:
+    def __init__(self, game):
+        self.ROWS = game.ROWS
+        self.COLS = game.COLS
+        self.board = [row[:] for row in game.board]
+        self.turn = game.turn
+        self.white_money = game.white_money
+        self.black_money = game.black_money
+        self.white_income_per_turn = game.white_income_per_turn
+        self.black_income_per_turn = game.black_income_per_turn
+        self.buy_options = game.buy_options
+        self.class_change_map = game.class_change_map
+        self.game_over = game.game_over
+        self.winner = game.winner
+
+    def is_path_clear(self, start, end):
+        sr, sc = start
+        er, ec = end
+        if sr == er:
+            step = 1 if ec > sc else -1
+            for c in range(sc + step, ec, step):
+                if self.board[sr][c] != '':
+                    return False
+        elif sc == ec:
+            step = 1 if er > sr else -1
+            for r in range(sr + step, er, step):
+                if self.board[r][sc] != '':
+                    return False
+        elif abs(sr - er) == abs(sc - ec):
+            r_step = 1 if er > sr else -1
+            c_step = 1 if ec > sc else -1
+            r, c = sr + r_step, sc + c_step
+            while r != er:
+                if self.board[r][c] != '':
+                    return False
+                r += r_step
+                c += c_step
+        return True
+
+    def is_valid_move(self, start, end):
+        sr, sc = start
+        er, ec = end
+        piece = self.board[sr][sc]
+
+        if not (0 <= er < self.ROWS and 0 <= ec < self.COLS):
+            return False
+
+        if not piece or piece[0] != self.turn:
+            return False
+
+        target = self.board[er][ec]
+        if target and target[0] == self.turn:
+            return False
+
+        if piece[1] == 'p':
+            direction = -1 if self.turn == 'w' else 1
+            if sc == ec and self.board[er][ec] == '' and er == sr + direction:
+                return True
+            if sc == ec and self.board[er][ec] == '' and (
+                (self.turn == 'w' and sr == self.ROWS - 2 and er == sr - 2 and self.board[sr - 1][sc] == '') or
+                (self.turn == 'b' and sr == 1 and er == sr + 2 and self.board[sr + 1][sc] == '')
+            ):
+                return True
+            if abs(sc - ec) == 1 and er == sr + direction and target and target[0] != self.turn:
+                return True
+            return False
+        elif piece[1] == 'r':
+            if (sr == er or sc == ec) and self.is_path_clear(start, end):
+                return True
+            return False
+        elif piece[1] == 'n':
+            dr = abs(sr - er)
+            dc = abs(sc - ec)
+            if (dr == 1 and dc == 2) or (dr == 2 and dc == 1):
+                return True
+            return False
+        elif piece[1] == 'b':
+            if abs(sr - er) == abs(sc - ec) and self.is_path_clear(start, end):
+                return True
+            return False
+        elif piece[1] == 'q':
+            if ((sr == er or sc == ec) or (abs(sr - er) == abs(sc - ec))) and self.is_path_clear(start, end):
+                return True
+            return False
+        elif piece[1] == 'k':
+            dr = abs(sr - er)
+            dc = abs(sc - ec)
+            if dr <= 1 and dc <= 1:
+                return True
+            return False
+
+        return False
+
+    def end_turn(self):
+        if self.turn == 'w':
+            self.white_money += self.white_income_per_turn
+        else:
+            self.black_money += self.black_income_per_turn
+        self.turn = 'b' if self.turn == 'w' else 'w'
+
+    def move_piece(self, start, end):
+        sr, sc = start
+        er, ec = end
+        self.board[er][ec] = self.board[sr][sc]
+        self.board[sr][sc] = ''
+        self.check_for_king_capture()
+        if not self.game_over:
+            self.end_turn()
+
+    def get_random_piece(self, option_type):
+        option = self.buy_options.get(option_type)
+        if not option:
+            return None
+        pieces_with_prob = option['pieces']
+        total_prob = sum(prob for _, prob in pieces_with_prob)
+        if total_prob == 0:
+            return None
+        rand_val = random.random()
+        cumulative_prob = 0.0
+        for piece_type, prob in pieces_with_prob:
+            cumulative_prob += prob
+            if rand_val < cumulative_prob:
+                return piece_type
+        return None
+
+    def buy_piece(self, option_type, target_pos):
+        cost = self.buy_options[option_type]['cost']
+        if self.turn == 'w':
+            current_money = self.white_money
+        else:
+            current_money = self.black_money
+        if current_money >= cost:
+            drawn_piece_type = self.get_random_piece(option_type)
+            if drawn_piece_type:
+                if self.turn == 'w':
+                    self.white_money -= cost
+                    self.board[target_pos[0]][target_pos[1]] = 'w' + drawn_piece_type
+                else:
+                    self.black_money -= cost
+                    self.board[target_pos[0]][target_pos[1]] = 'b' + drawn_piece_type
+                self.end_turn()
+
+    def hire_employee(self):
+        cost = 20
+        if self.turn == 'w':
+            if self.white_money >= cost:
+                self.white_money -= cost
+                self.white_income_per_turn += 2
+                self.end_turn()
+        else:
+            if self.black_money >= cost:
+                self.black_money -= cost
+                self.black_income_per_turn += 2
+                self.end_turn()
+
+    def class_change(self, pos):
+        cost = 70
+        sr, sc = pos
+        piece_to_change = self.board[sr][sc]
+        if not piece_to_change or piece_to_change[0] != self.turn:
+            return
+        if self.turn == 'w':
+            if self.white_money >= cost:
+                original_type = piece_to_change[1]
+                new_type = self.class_change_map.get(original_type)
+                if new_type:
+                    self.white_money -= cost
+                    self.board[sr][sc] = self.turn + new_type
+                    self.end_turn()
+        else:
+            if self.black_money >= cost:
+                original_type = piece_to_change[1]
+                new_type = self.class_change_map.get(original_type)
+                if new_type:
+                    self.black_money -= cost
+                    self.board[sr][sc] = self.turn + new_type
+                    self.end_turn()
+
+    def check_for_king_capture(self):
+        white_king_exists = False
+        black_king_exists = False
+        for r in range(self.ROWS):
+            for c in range(self.COLS):
+                piece = self.board[r][c]
+                if piece == 'wk':
+                    white_king_exists = True
+                elif piece == 'bk':
+                    black_king_exists = True
+        if not white_king_exists:
+            self.game_over = True
+            self.winner = 'b'
+        elif not black_king_exists:
+            self.game_over = True
+            self.winner = 'w'
+
+    def get_possible_actions(self):
+        actions = []
+        for r in range(self.ROWS):
+            for c in range(self.COLS):
+                piece = self.board[r][c]
+                if piece and piece[0] == self.turn:
+                    for er in range(self.ROWS):
+                        for ec in range(self.COLS):
+                            if self.is_valid_move((r, c), (er, ec)):
+                                actions.append({'type': 'move', 'start': (r, c), 'end': (er, ec)})
+        for r in range(self.ROWS):
+            for c in range(self.COLS):
+                if self.board[r][c] == '':
+                    is_in_territory = False
+                    if self.turn == 'w' and r >= self.ROWS - 3:
+                        is_in_territory = True
+                    elif self.turn == 'b' and r <= 2:
+                        is_in_territory = True
+                    if is_in_territory:
+                        for option_type in self.buy_options.keys():
+                            cost = self.buy_options[option_type]['cost']
+                            current_money = self.white_money if self.turn == 'w' else self.black_money
+                            if current_money >= cost:
+                                actions.append({'type': 'buy', 'option': option_type, 'target_pos': (r, c)})
+        cost_hire = 20
+        current_money = self.white_money if self.turn == 'w' else self.black_money
+        if current_money >= cost_hire:
+            actions.append({'type': 'hire'})
+        cost_class_change = 70
+        if current_money >= cost_class_change:
+            for r in range(self.ROWS):
+                for c in range(self.COLS):
+                    piece = self.board[r][c]
+                    if piece and piece[0] == self.turn and piece[1] in self.class_change_map:
+                        actions.append({'type': 'class_change', 'pos': (r, c)})
+        return actions
+
+    def apply_action(self, action):
+        if action['type'] == 'move':
+            self.move_piece(action['start'], action['end'])
+        elif action['type'] == 'buy':
+            self.buy_piece(action['option'], action['target_pos'])
+        elif action['type'] == 'hire':
+            self.hire_employee()
+        elif action['type'] == 'class_change':
+            self.class_change(action['pos'])
 
 # --- ChessGame クラスの定義 ---
 class ChessGame:
@@ -381,35 +623,41 @@ class ChessGame:
             self.end_turn()
             return
 
-        # --- CPUの簡易評価 ---
-        best_actions = []
-        best_score = -1
+        # --- CPU: Monte Carlo search ---
+        end_time = time.time() + 2
+        wins = [0] * len(possible_actions)
+        sims = [0] * len(possible_actions)
+        idx = 0
+        while time.time() < end_time:
+            action_index = idx % len(possible_actions)
+            idx += 1
+            sim_game = SimGame(self)
+            sim_game.apply_action(possible_actions[action_index])
+            steps = 0
+            while not sim_game.game_over and steps < 40:
+                actions = sim_game.get_possible_actions()
+                if not actions:
+                    sim_game.end_turn()
+                    steps += 1
+                    continue
+                rand_action = random.choice(actions)
+                sim_game.apply_action(rand_action)
+                steps += 1
+            if sim_game.game_over and sim_game.winner == self.turn:
+                wins[action_index] += 1
+            sims[action_index] += 1
 
-        for action in possible_actions:
-            score = 0
-            if action['type'] == 'move':
-                er, ec = action['end']
-                target = self.board[er][ec]
-                if target:
-                    piece_type = target[1]
-                    if piece_type == 'k':
-                        score = 100
-                    else:
-                        score = self.piece_rewards.get(piece_type, 0)
-            elif action['type'] == 'class_change':
-                score = 5
-            elif action['type'] == 'hire':
-                score = 2
-            elif action['type'] == 'buy':
-                score = 1
+        best_rate = -1
+        best_indices = []
+        for i in range(len(possible_actions)):
+            rate = wins[i] / sims[i] if sims[i] > 0 else 0
+            if rate > best_rate:
+                best_rate = rate
+                best_indices = [i]
+            elif rate == best_rate:
+                best_indices.append(i)
 
-            if score > best_score:
-                best_score = score
-                best_actions = [action]
-            elif score == best_score:
-                best_actions.append(action)
-
-        chosen_action = random.choice(best_actions)
+        chosen_action = possible_actions[random.choice(best_indices)]
         self.add_log_message(f"CPU chooses: {chosen_action['type']}")
 
         if chosen_action['type'] == 'move':
