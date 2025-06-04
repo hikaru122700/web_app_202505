@@ -848,9 +848,15 @@ def run_chess_game():
 
     # リセットボタンの定義
     reset_button_rect = pygame.Rect(0, 0, 120, 30)
-    reset_button_rect.center = (UI_AREA_START_X + 100, button_area_center_y - 100)
+    reset_button_initial_center = (UI_AREA_START_X + 100, button_area_center_y - 100)
+    reset_button_rect.center = reset_button_initial_center
 
     def draw_game():
+        if game.game_over:
+            reset_button_rect.center = (WIDTH // 2, HEIGHT // 2 + 60)
+        else:
+            reset_button_rect.center = reset_button_initial_center
+
         screen.fill(UI_BACKGROUND_COLOR)
 
         # haikei.png を描画
@@ -925,7 +931,8 @@ def run_chess_game():
         screen.blit(white_money_text, white_money_text_rect)
         screen.blit(black_money_text, black_money_text_rect)
 
-        draw_button(screen, reset_button_rect, "Reset", (180, 80, 80), WHITE_TEXT, button_font)
+        if not game.game_over:
+            draw_button(screen, reset_button_rect, "Reset", (180, 80, 80), WHITE_TEXT, button_font)
 
         if not game.game_over:
             if selected_empty_square:
@@ -949,6 +956,7 @@ def run_chess_game():
             text_surface = font.render(f"{'white' if game.winner == 'w' else 'black'} win!", True, RED)
             text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2))
             screen.blit(text_surface, text_rect)
+            draw_button(screen, reset_button_rect, "Reset", (180, 80, 80), WHITE_TEXT, button_font)
 
     def draw_button(surface, rect, text, color, text_color, font_obj):
         pygame.draw.rect(surface, color, rect)
