@@ -628,6 +628,48 @@ class ChessGame:
             self.end_turn()
             return
 
+        def can_capture_king(state, attacker):
+            original_turn = state.turn
+            state.turn = attacker
+            target = ('w' if attacker == 'b' else 'b') + 'k'
+            for r in range(state.ROWS):
+                for c in range(state.COLS):
+                    piece = state.board[r][c]
+                    if piece and piece[0] == attacker:
+                        for er in range(state.ROWS):
+                            for ec in range(state.COLS):
+                                if state.is_valid_move((r, c), (er, ec)) and state.board[er][ec] == target:
+                                    state.turn = original_turn
+                                    return True
+            state.turn = original_turn
+            return False
+
+        opponent_color = 'b' if self.turn == 'w' else 'w'
+        in_danger = can_capture_king(SimGame(self), opponent_color)
+
+        if in_danger:
+            safe_actions = []
+            for action in possible_actions:
+                sim = SimGame(self)
+                sim.apply_action(action)
+                if not can_capture_king(sim, sim.turn):
+                    safe_actions.append(action)
+
+            if safe_actions:
+                possible_actions = safe_actions
+            else:
+                chosen_action = random.choice(possible_actions)
+                self.add_log_message(f"CPU chooses: {chosen_action['type']}")
+                if chosen_action['type'] == 'move':
+                    self.move_piece(chosen_action['start'], chosen_action['end'])
+                elif chosen_action['type'] == 'buy':
+                    self.buy_piece(chosen_action['option'], chosen_action['target_pos'])
+                elif chosen_action['type'] == 'hire':
+                    self.hire_employee()
+                elif chosen_action['type'] == 'class_change':
+                    self.class_change(chosen_action['pos'])
+                return
+
 
         # --- CPU: Monte Carlo search ---
         end_time = time.time() + 2
