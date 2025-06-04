@@ -623,6 +623,7 @@ class ChessGame:
             self.end_turn()
             return
 
+
         # --- CPU: Monte Carlo search ---
         end_time = time.time() + 2
         wins = [0] * len(possible_actions)
@@ -658,6 +659,7 @@ class ChessGame:
                 best_indices.append(i)
 
         chosen_action = possible_actions[random.choice(best_indices)]
+
         self.add_log_message(f"CPU chooses: {chosen_action['type']}")
 
         if chosen_action['type'] == 'move':
