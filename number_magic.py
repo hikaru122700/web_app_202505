@@ -7,8 +7,7 @@ st.title("数当てゲーム (Guess the Number)")
 
 # ゲームの初期化
 def init_game():
-    # st.session_state.secret = random.randint(1, 100)
-    st.session_state.secret = 1
+    st.session_state.secret = random.randint(1, 100)
     st.session_state.count = 0
     st.session_state.finished = False
     st.session_state.message = "数字を当ててください."
