@@ -342,6 +342,11 @@ class ChessGame:
     def get_current_dog_image(self):
         return self.dog_images_dict.get(self.current_dog_image_key)
 
+    def reset_game(self):
+        """Reset all game state to start a new game."""
+        ChessGame.__init__(self)
+        self.set_dog_image('default')
+
 
     def add_log_message(self, message):
         self.game_log_messages.append(message)
@@ -798,6 +803,10 @@ def run_chess_game():
     buy_epic_button = pygame.Rect(0, 0, 120, 30)
     buy_epic_button.center = (UI_AREA_START_X + 100, button_area_center_y - 60)
 
+    # リセットボタンの定義
+    reset_button_rect = pygame.Rect(0, 0, 120, 30)
+    reset_button_rect.center = (UI_AREA_START_X + 100, button_area_center_y - 100)
+
     def draw_game():
         screen.fill(UI_BACKGROUND_COLOR)
 
@@ -867,6 +876,8 @@ def run_chess_game():
         screen.blit(white_money_text, white_money_text_rect)
         screen.blit(black_money_text, black_money_text_rect)
 
+        draw_button(screen, reset_button_rect, "Reset", (180, 80, 80), WHITE_TEXT, button_font)
+
         if not game.game_over:
             if selected_empty_square:
                 draw_button(screen, buy_normal_button, f"Normal ({game.buy_options['normal']['cost']}G)", (150, 150, 200), WHITE_TEXT, buy_font)
@@ -914,9 +925,15 @@ def run_chess_game():
             if event.type == pygame.QUIT:
                 running = False
                 break
-            elif event.type == pygame.MOUSEBUTTONDOWN and not game.game_over:
-                if game.turn == 'w': 
-                    x, y = pygame.mouse.get_pos()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                x, y = pygame.mouse.get_pos()
+                if reset_button_rect.collidepoint(x, y):
+                    game.reset_game()
+                    selected = None
+                    selected_empty_square = None
+                    continue
+                if not game.game_over and game.turn == 'w':
+
                     
                     if BOARD_OFFSET_X <= x < BOARD_OFFSET_X + game.COLS * SQUARE_SIZE and \
                        BOARD_OFFSET_Y <= y < BOARD_OFFSET_Y + game.ROWS * SQUARE_SIZE:
