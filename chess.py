@@ -116,9 +116,9 @@ class SimGame:
             (moved_piece[0] == 'b' and er == self.ROWS - 1)
         ):
             self.board[er][ec] = moved_piece[0] + 'q'
-            self.add_log_message(
-                f"{'White' if moved_piece[0] == 'w' else 'Black'} pawn promoted to Queen!"
-            )
+            # self.add_log_message(
+            #     f"{'White' if moved_piece[0] == 'w' else 'Black'} pawn promoted to Queen!"
+            # )
         self.check_for_king_capture()
         if not self.game_over:
             self.end_turn()
