@@ -671,6 +671,25 @@ class ChessGame:
                 return
 
 
+        # --- Capture prioritization ---
+        capture_actions = []
+        for action in possible_actions:
+            if action['type'] == 'move':
+                er, ec = action['end']
+                target = self.board[er][ec]
+                if target and target[0] != self.turn:
+                    value = self.piece_rewards.get(target[1], 0)
+                    capture_actions.append((action, value))
+
+        if capture_actions:
+            max_val = max(val for _, val in capture_actions)
+            best_actions = [a for a, v in capture_actions if v == max_val]
+            chosen_action = random.choice(best_actions)
+            self.add_log_message(f"CPU chooses: {chosen_action['type']}")
+            self.move_piece(chosen_action['start'], chosen_action['end'])
+            return
+
+
         # --- CPU: Monte Carlo search ---
         end_time = time.time() + 2
         wins = [0] * len(possible_actions)
