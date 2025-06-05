@@ -719,41 +719,68 @@ class ChessGame:
             return
 
 
-        # --- CPU: Monte Carlo search ---
-        end_time = time.time() + 2
-        wins = [0] * len(possible_actions)
-        sims = [0] * len(possible_actions)
-        idx = 0
-        while time.time() < end_time:
-            action_index = idx % len(possible_actions)
-            idx += 1
-            sim_game = SimGame(self)
-            sim_game.apply_action(possible_actions[action_index])
-            steps = 0
-            while not sim_game.game_over and steps < 40:
-                actions = sim_game.get_possible_actions()
-                if not actions:
-                    sim_game.end_turn()
-                    steps += 1
-                    continue
-                rand_action = random.choice(actions)
-                sim_game.apply_action(rand_action)
-                steps += 1
-            if sim_game.game_over and sim_game.winner == self.turn:
-                wins[action_index] += 1
-            sims[action_index] += 1
+        # --- CPU: Alpha-Beta search ---
+        def evaluate_state(state, player):
+            score = 0
+            for r in range(state.ROWS):
+                for c in range(state.COLS):
+                    piece = state.board[r][c]
+                    if piece:
+                        val = self.piece_rewards.get(piece[1], 0)
+                        score += val if piece[0] == player else -val
 
-        best_rate = -1
-        best_indices = []
-        for i in range(len(possible_actions)):
-            rate = wins[i] / sims[i] if sims[i] > 0 else 0
-            if rate > best_rate:
-                best_rate = rate
-                best_indices = [i]
-            elif rate == best_rate:
-                best_indices.append(i)
+            money_diff = state.white_money - state.black_money
+            score += money_diff if player == 'w' else -money_diff
 
-        chosen_action = possible_actions[random.choice(best_indices)]
+            if state.game_over:
+                if state.winner == player:
+                    score += 1000
+                elif state.winner and state.winner != player:
+                    score -= 1000
+            return score
+
+        def alpha_beta(state, depth, alpha, beta, maximizing, player):
+            if depth == 0 or state.game_over:
+                return evaluate_state(state, player)
+
+            actions = state.get_possible_actions()
+            if maximizing:
+                value = float('-inf')
+                for action in actions:
+                    sim = SimGame(state)
+                    sim.apply_action(action)
+                    value = max(value, alpha_beta(sim, depth - 1, alpha, beta, False, player))
+                    alpha = max(alpha, value)
+                    if alpha >= beta:
+                        break
+                return value
+            else:
+                value = float('inf')
+                for action in actions:
+                    sim = SimGame(state)
+                    sim.apply_action(action)
+                    value = min(value, alpha_beta(sim, depth - 1, alpha, beta, True, player))
+                    beta = min(beta, value)
+                    if beta <= alpha:
+                        break
+                return value
+
+        def best_action(state, depth):
+            actions = state.get_possible_actions()
+            best_val = float('-inf')
+            best_actions = []
+            for action in actions:
+                sim = SimGame(state)
+                sim.apply_action(action)
+                val = alpha_beta(sim, depth - 1, float('-inf'), float('inf'), False, state.turn)
+                if val > best_val:
+                    best_val = val
+                    best_actions = [action]
+                elif val == best_val:
+                    best_actions.append(action)
+            return random.choice(best_actions)
+
+        chosen_action = best_action(SimGame(self), 3)
 
         self.add_log_message(f"CPU chooses: {chosen_action['type']}")
 
