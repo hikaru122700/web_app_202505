@@ -976,6 +976,22 @@ def run_chess_game():
                 draw_button(screen, buy_normal_button, f"Normal ({game.buy_options['normal']['cost']}G)", (150, 150, 200), WHITE_TEXT, buy_font)
                 draw_button(screen, buy_rare_button, f"Rare ({game.buy_options['rare']['cost']}G)", (200, 150, 100), WHITE_TEXT, buy_font)
                 draw_button(screen, buy_epic_button, f"Epic ({game.buy_options['epic']['cost']}G)", (250, 100, 50), WHITE_TEXT, buy_font)
+
+                # --- Display probability information next to each buy option ---
+                def format_prob(option):
+                    return ', '.join([f"{pt}:{prob*100:.1f}%" for pt, prob in game.buy_options[option]['pieces']])
+
+                normal_prob_surface = button_font.render(format_prob('normal'), True, WHITE_TEXT)
+                normal_prob_rect = normal_prob_surface.get_rect(midleft=(buy_normal_button.right + 10, buy_normal_button.centery))
+                screen.blit(normal_prob_surface, normal_prob_rect)
+
+                rare_prob_surface = button_font.render(format_prob('rare'), True, WHITE_TEXT)
+                rare_prob_rect = rare_prob_surface.get_rect(midleft=(buy_rare_button.right + 10, buy_rare_button.centery))
+                screen.blit(rare_prob_surface, rare_prob_rect)
+
+                epic_prob_surface = button_font.render(format_prob('epic'), True, WHITE_TEXT)
+                epic_prob_rect = epic_prob_surface.get_rect(midleft=(buy_epic_button.right + 10, buy_epic_button.centery))
+                screen.blit(epic_prob_surface, epic_prob_rect)
             elif selected and game.board[selected[0]][selected[1]] and game.board[selected[0]][selected[1]][0] == game.turn:
                 piece_at_selected = game.board[selected[0]][selected[1]]
                 if piece_at_selected[1] in game.class_change_map:
