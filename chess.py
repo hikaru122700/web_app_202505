@@ -276,6 +276,7 @@ class ChessGame:
         self.white_income_per_turn = 10
         self.black_income_per_turn = 10
         self.game_log_messages = ["Game Start!"]
+        self.last_cpu_action = None
 
         self.piece_rewards = {
             'p': 10, 'r': 30, 'n': 30, 'b': 30, 'q': 30, 'k': 0
@@ -456,7 +457,10 @@ class ChessGame:
     def move_piece(self, start, end):
         sr, sc = start
         er, ec = end
-        
+
+        if self.turn == 'b':
+            self.last_cpu_action = {'type': 'move', 'start': start, 'end': end}
+
         captured_piece_full_name = self.board[er][ec]
         
         reward = 0
@@ -524,7 +528,10 @@ class ChessGame:
                 else:
                     self.black_money -= cost
                     self.board[target_pos[0]][target_pos[1]] = 'b' + drawn_piece_type
-                
+
+                if self.turn == 'b':
+                    self.last_cpu_action = {'type': 'buy', 'pos': target_pos}
+
                 self.add_log_message(f"{'White' if self.turn == 'w' else 'Black'} choice {option_type}, and buy {drawn_piece_type}.")
                 self.set_dog_image('buy') # 購入行動
                 self.end_turn()
@@ -541,6 +548,8 @@ class ChessGame:
             else:
                 self.black_money -= cost
                 self.black_income_per_turn += 2
+            if self.turn == 'b':
+                self.last_cpu_action = {'type': 'hire'}
             self.add_log_message(f"You hire employee!")
             self.set_dog_image('buy') # 雇用行動
             self.end_turn()
@@ -566,8 +575,10 @@ class ChessGame:
                     self.white_money -= cost
                 else:
                     self.black_money -= cost
-                
+
                 self.board[sr][sc] = self.turn + new_type
+                if self.turn == 'b':
+                    self.last_cpu_action = {'type': 'class_change', 'pos': (sr, sc)}
                 self.add_log_message(f"{'White' if self.turn == 'w' else 'Black'}'s {original_type} is changed class to {new_type}.")
                 self.set_dog_image('buy') # クラス変更行動
                 self.end_turn()
@@ -799,6 +810,7 @@ def run_chess_game():
     GRAY_OVERLAY = (100, 100, 100, 128)
     UI_BACKGROUND_COLOR = (50, 50, 50)
     MOVE_HIGHLIGHT = (144, 238, 144, 160)  # Light green with transparency
+    OPPONENT_HIGHLIGHT = (255, 165, 0, 160)  # Orange highlight for opponent move
 
     # フォント設定
     pygame.font.init()
@@ -908,6 +920,20 @@ def run_chess_game():
                 piece = game.board[row][col]
                 if piece:
                     screen.blit(pieces[piece], (col*SQUARE_SIZE + BOARD_OFFSET_X, row*SQUARE_SIZE + BOARD_OFFSET_Y))
+
+        # CPUが直前に行ったアクションをハイライト
+        if game.turn == 'w' and game.last_cpu_action and not game.game_over:
+            action = game.last_cpu_action
+            positions = []
+            if action['type'] == 'move':
+                positions = [action['start'], action['end']]
+            elif action['type'] in ('buy', 'class_change'):
+                positions = [action['pos']]
+
+            for pr, pc in positions:
+                highlight_surface = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+                highlight_surface.fill(OPPONENT_HIGHLIGHT)
+                screen.blit(highlight_surface, (pc*SQUARE_SIZE + BOARD_OFFSET_X, pr*SQUARE_SIZE + BOARD_OFFSET_Y))
         # 駒が選択されている場合は移動可能マスをハイライト
         if selected and not game.game_over:
             for er in range(game.ROWS):
@@ -1039,6 +1065,7 @@ def run_chess_game():
                             if game.is_valid_move(selected, (row, col)):
                                 game.add_log_message(f"Moved piece from {selected} to {(row, col)}.")
                                 game.move_piece(selected, (row, col))
+                                game.last_cpu_action = None
                             selected = None
                             selected_empty_square = None
                         elif game.board[row][col] == '':
@@ -1065,14 +1092,17 @@ def run_chess_game():
                                 if game.buy_piece('normal', selected_empty_square):
                                     selected_empty_square = None
                                     selected = None
+                                    game.last_cpu_action = None
                             elif buy_rare_button.collidepoint(x, y):
                                 if game.buy_piece('rare', selected_empty_square):
                                     selected_empty_square = None
                                     selected = None
+                                    game.last_cpu_action = None
                             elif buy_epic_button.collidepoint(x, y):
                                 if game.buy_piece('epic', selected_empty_square):
                                     selected_empty_square = None
                                     selected = None
+                                    game.last_cpu_action = None
                             else:
                                 selected_empty_square = None
                                 selected = None
@@ -1084,8 +1114,10 @@ def run_chess_game():
                                    game.board[selected[0]][selected[1]][1] in game.class_change_map:
                                     if game.class_change(selected):
                                         selected = None
+                                        game.last_cpu_action = None
                                 else:
                                     game.hire_employee()
+                                    game.last_cpu_action = None
                                 selected = None
                                 selected_empty_square = None
                             else:
