@@ -848,6 +848,16 @@ def run_chess_game():
     turn_font = pygame.font.SysFont('arial', 23)
     log_font = pygame.font.SysFont('arial', 23)
 
+    # 駒ごとの移動説明(ホバーテキスト用)
+    movement_descriptions = {
+        'p': 'ポーン: 前に1マス(初回は2マス)。斜め前で敵を取る',
+        'r': 'ルーク: 縦横に好きなだけ移動',
+        'n': 'ナイト: L字に移動',
+        'b': 'ビショップ: 斜めに好きなだけ移動',
+        'q': 'クイーン: 縦横斜めに好きなだけ移動',
+        'k': 'キング: 周囲1マス移動'
+    }
+
     # 背景画像の取得 (haikei.png はUIの背景として残す)
     bg_path = "haikei.png"
     bg = None
@@ -888,6 +898,10 @@ def run_chess_game():
     selected_empty_square = None
 
     clock = pygame.time.Clock()
+
+    # ホバーテキスト表示用の変数
+    hovered_text = None
+    hover_pos = (0, 0)
 
     # UIエリアの開始X座標
     UI_AREA_START_X = BOARD_OFFSET_X + game.COLS * SQUARE_SIZE + 30
@@ -953,6 +967,16 @@ def run_chess_game():
                 piece = game.board[row][col]
                 if piece:
                     screen.blit(pieces[piece], (col*SQUARE_SIZE + BOARD_OFFSET_X, row*SQUARE_SIZE + BOARD_OFFSET_Y))
+
+        # ホバーテキストの描画
+        if hovered_text:
+            tooltip_surface = button_font.render(hovered_text, True, WHITE_TEXT)
+            tooltip_rect = tooltip_surface.get_rect()
+            tooltip_rect.topleft = (hover_pos[0] + 10, hover_pos[1] - 20)
+            bg_rect = pygame.Rect(tooltip_rect.x - 2, tooltip_rect.y - 2,
+                                   tooltip_rect.width + 4, tooltip_rect.height + 4)
+            pygame.draw.rect(screen, (0, 0, 0), bg_rect)
+            screen.blit(tooltip_surface, tooltip_rect)
 
         # CPUが直前に行ったアクションをハイライト
         if game.turn == 'w' and game.last_cpu_action and not game.game_over:
@@ -1094,6 +1118,20 @@ def run_chess_game():
             if event.type == pygame.QUIT:
                 running = False
                 break
+            elif event.type == pygame.MOUSEMOTION:
+                x, y = event.pos
+                if BOARD_OFFSET_X <= x < BOARD_OFFSET_X + game.COLS * SQUARE_SIZE and \
+                   BOARD_OFFSET_Y <= y < BOARD_OFFSET_Y + game.ROWS * SQUARE_SIZE:
+                    col = (x - BOARD_OFFSET_X) // SQUARE_SIZE
+                    row = (y - BOARD_OFFSET_Y) // SQUARE_SIZE
+                    piece = game.board[row][col]
+                    if piece:
+                        hovered_text = movement_descriptions.get(piece[1])
+                        hover_pos = (x, y)
+                    else:
+                        hovered_text = None
+                else:
+                    hovered_text = None
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if reset_button_rect.collidepoint(x, y):
