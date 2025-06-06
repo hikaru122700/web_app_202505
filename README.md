@@ -1,28 +1,5 @@
 # web_app_202505
 
-以下のファイルはstreamlitで構成されています。
-
-- X.py
-- number_magic.py
-
-実行時には以下のコマンドを入力してください。
-
-```bash
-streamlit run [filename.py]
-```
-
-以下のファイルはpygameで構成されています。
-
-- chess.py
-
-ポーンが相手陣地の最奥列に到達すると自動的にクイーンへ昇格します。
-
-実行時には以下のコマンドを入力してください。
-
-```bash
-python chess.py
-```
-
 # 開発手順
 分からないことは@hikaru122700に聞いてください
 
@@ -68,3 +45,34 @@ Updates were rejected because the remote contains work that you do not have loca
 ```bash
 git pull origin main
 ```
+
+
+以下のファイルはstreamlitで構成されています。
+
+- X.py
+- number_magic.py
+
+実行時には以下のコマンドを入力してください。
+
+```bash
+streamlit run [filename.py]
+```
+
+以下のファイルはpygameで構成されています。
+
+- chess.py
+
+実行時には以下のコマンドを入力してください。
+
+```bash
+python chess.py
+```
+
+# chessルール
+
+ポーンが相手陣地の最奥列に到達すると自動的にクイーンへ昇格します。
+
+任意の駒を移動させる・駒を買い出現させるの中から行動を選択してください。
+
+持ち金は左下に表示されます。
+
