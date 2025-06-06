@@ -838,6 +838,7 @@ def run_chess_game():
     UI_BACKGROUND_COLOR = (50, 50, 50)
     MOVE_HIGHLIGHT = (144, 238, 144, 160)  # Light green with transparency
     OPPONENT_HIGHLIGHT = (255, 165, 0, 160)  # Orange highlight for opponent move
+    PROB_BG_COLOR = (0, 0, 0)  # Background for probability text
 
     # フォント設定
     pygame.font.init()
@@ -1042,14 +1043,17 @@ def run_chess_game():
 
                 normal_prob_surface = button_font.render(format_prob('normal'), True, WHITE_TEXT)
                 normal_prob_rect = normal_prob_surface.get_rect(midleft=(buy_normal_button.right + 10, buy_normal_button.centery))
+                pygame.draw.rect(screen, PROB_BG_COLOR, normal_prob_rect.inflate(4, 4))
                 screen.blit(normal_prob_surface, normal_prob_rect)
 
                 rare_prob_surface = button_font.render(format_prob('rare'), True, WHITE_TEXT)
                 rare_prob_rect = rare_prob_surface.get_rect(midleft=(buy_rare_button.right + 10, buy_rare_button.centery))
+                pygame.draw.rect(screen, PROB_BG_COLOR, rare_prob_rect.inflate(4, 4))
                 screen.blit(rare_prob_surface, rare_prob_rect)
 
                 epic_prob_surface = button_font.render(format_prob('epic'), True, WHITE_TEXT)
                 epic_prob_rect = epic_prob_surface.get_rect(midleft=(buy_epic_button.right + 10, buy_epic_button.centery))
+                pygame.draw.rect(screen, PROB_BG_COLOR, epic_prob_rect.inflate(4, 4))
                 screen.blit(epic_prob_surface, epic_prob_rect)
             elif selected and game.board[selected[0]][selected[1]] and game.board[selected[0]][selected[1]][0] == game.turn:
                 piece_at_selected = game.board[selected[0]][selected[1]]
