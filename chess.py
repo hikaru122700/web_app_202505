@@ -901,10 +901,10 @@ def run_chess_game():
     dog_image_pos_y = HEIGHT - game.dog_image_display_size[1] - 20 # 下端から20px
     dog_image_display_rect = pygame.Rect(500, 110, 10, 60)
 
-    # 所持金表示エリア (画面右下に配置)
+    # 所持金表示エリア (画面左下に配置)
     MONEY_RECT_SIZE = (240, 80)
     money_bg_rect = pygame.Rect(
-        WIDTH - MONEY_RECT_SIZE[0] - 20,
+        20,
         HEIGHT - MONEY_RECT_SIZE[1] - 20,
         MONEY_RECT_SIZE[0],
         MONEY_RECT_SIZE[1],
