@@ -1063,21 +1063,28 @@ def run_chess_game():
 
                 # --- Display probability information next to each buy option ---
                 def format_prob(option):
-                    return ', '.join([f"{pt}:{prob*100:.1f}%" for pt, prob in game.buy_options[option]['pieces']])
+                    piece_names = {'p': 'ポーン', 'r': 'ルーク', 'n': 'ナイト', 'b': 'ビショップ', 'q': 'クイーン', 'k': 'キング'}
+                    return ', '.join([f"{piece_names.get(pt, pt)}:{prob*100:.1f}%" for pt, prob in game.buy_options[option]['pieces']])
 
                 normal_prob_surface = button_font.render(format_prob('normal'), True, WHITE_TEXT)
                 normal_prob_rect = normal_prob_surface.get_rect(midleft=(buy_normal_button.right + 10, buy_normal_button.centery))
-                pygame.draw.rect(screen, PROB_BG_COLOR, normal_prob_rect.inflate(4, 4))
+                # 背景サイズを少し大きくして見切れないようにする
+                normal_prob_bg_rect = normal_prob_rect.inflate(8, 8)
+                pygame.draw.rect(screen, PROB_BG_COLOR, normal_prob_bg_rect)
                 screen.blit(normal_prob_surface, normal_prob_rect)
 
                 rare_prob_surface = button_font.render(format_prob('rare'), True, WHITE_TEXT)
                 rare_prob_rect = rare_prob_surface.get_rect(midleft=(buy_rare_button.right + 10, buy_rare_button.centery))
-                pygame.draw.rect(screen, PROB_BG_COLOR, rare_prob_rect.inflate(4, 4))
+                # 背景サイズを少し大きくして見切れないようにする
+                rare_prob_bg_rect = rare_prob_rect.inflate(8, 8)
+                pygame.draw.rect(screen, PROB_BG_COLOR, rare_prob_bg_rect)
                 screen.blit(rare_prob_surface, rare_prob_rect)
 
                 epic_prob_surface = button_font.render(format_prob('epic'), True, WHITE_TEXT)
                 epic_prob_rect = epic_prob_surface.get_rect(midleft=(buy_epic_button.right + 10, buy_epic_button.centery))
-                pygame.draw.rect(screen, PROB_BG_COLOR, epic_prob_rect.inflate(4, 4))
+                # 背景サイズを少し大きくして見切れないようにする
+                epic_prob_bg_rect = epic_prob_rect.inflate(8, 8)
+                pygame.draw.rect(screen, PROB_BG_COLOR, epic_prob_bg_rect)
                 screen.blit(epic_prob_surface, epic_prob_rect)
             elif selected and game.board[selected[0]][selected[1]] and game.board[selected[0]][selected[1]][0] == game.turn:
                 piece_at_selected = game.board[selected[0]][selected[1]]
