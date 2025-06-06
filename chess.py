@@ -842,12 +842,12 @@ def run_chess_game():
 
     # フォント設定
     pygame.font.init()
-    font = pygame.font.SysFont('arial', 48)
-    money_font = pygame.font.SysFont('arial', 20)
-    buy_font = pygame.font.SysFont('arial', 23)
-    button_font = pygame.font.SysFont('arial', 18)
-    turn_font = pygame.font.SysFont('arial', 23)
-    log_font = pygame.font.SysFont('arial', 23)
+    font = pygame.font.SysFont('meiryo', 48)
+    money_font = pygame.font.SysFont('meiryo', 20)
+    buy_font = pygame.font.SysFont('meiryo', 23)
+    button_font = pygame.font.SysFont('meiryo', 18)
+    turn_font = pygame.font.SysFont('meiryo', 23)
+    log_font = pygame.font.SysFont('meiryo', 23)
 
     # 駒ごとの移動説明(ホバーテキスト用)
     movement_descriptions = {
