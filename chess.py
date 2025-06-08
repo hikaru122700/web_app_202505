@@ -842,21 +842,26 @@ def run_chess_game():
 
     # フォント設定
     pygame.font.init()
-    font = pygame.font.SysFont('arial', 48)
-    money_font = pygame.font.SysFont('arial', 20)
-    buy_font = pygame.font.SysFont('arial', 23)
-    button_font = pygame.font.SysFont('arial', 18)
-    turn_font = pygame.font.SysFont('arial', 23)
-    log_font = pygame.font.SysFont('arial', 23)
+    # Use a font that supports Japanese characters for hover text
+    jp_font_path = pygame.font.match_font('Noto Sans CJK JP')
+    if not jp_font_path:
+        jp_font_path = pygame.font.get_default_font()
+
+    font = pygame.font.Font(jp_font_path, 48)
+    money_font = pygame.font.Font(jp_font_path, 20)
+    buy_font = pygame.font.Font(jp_font_path, 23)
+    button_font = pygame.font.Font(jp_font_path, 18)
+    turn_font = pygame.font.Font(jp_font_path, 23)
+    log_font = pygame.font.Font(jp_font_path, 23)
 
     # 駒ごとの移動説明(ホバーテキスト用)
     movement_descriptions = {
-        'p': 'ポーン: 前に1マス(初回は2マス)。斜め前で敵を取る',
-        'r': 'ルーク: 縦横に好きなだけ移動',
-        'n': 'ナイト: L字に移動',
-        'b': 'ビショップ: 斜めに好きなだけ移動',
-        'q': 'クイーン: 縦横斜めに好きなだけ移動',
-        'k': 'キング: 周囲1マス移動'
+        'p': 'ポーン: 前に1マス(初回は2マス)進み、斜め前で敵を取る',
+        'r': 'ルーク: 縦横方向に何マスでも移動できる',
+        'n': 'ナイト: L字型に移動し、駒を飛び越えられる',
+        'b': 'ビショップ: 斜め方向に何マスでも移動できる',
+        'q': 'クイーン: 縦横斜めすべての方向に何マスでも移動できる',
+        'k': 'キング: 周囲1マスだけ移動できる'
     }
 
     # 背景画像の取得 (haikei.png はUIの背景として残す)
