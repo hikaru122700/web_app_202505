@@ -108,8 +108,19 @@ class SimGame:
     def move_piece(self, start, end):
         sr, sc = start
         er, ec = end
+        captured_piece = self.board[er][ec]
         self.board[er][ec] = self.board[sr][sc]
         self.board[sr][sc] = ''
+        if captured_piece:
+            in_enemy_territory = (
+                (self.turn == 'w' and er <= 2) or
+                (self.turn == 'b' and er >= self.ROWS - 3)
+            )
+            if in_enemy_territory:
+                if self.turn == 'w':
+                    self.white_money += 5
+                else:
+                    self.black_money += 5
         moved_piece = self.board[er][ec]
         if moved_piece[1] == 'p' and (
             (moved_piece[0] == 'w' and er == 0) or
@@ -157,7 +168,7 @@ class SimGame:
                 self.end_turn()
 
     def hire_employee(self):
-        cost = 20
+        cost = 40
         if self.turn == 'w':
             if self.white_money >= cost:
                 self.white_money -= cost
@@ -233,7 +244,7 @@ class SimGame:
                             current_money = self.white_money if self.turn == 'w' else self.black_money
                             if current_money >= cost:
                                 actions.append({'type': 'buy', 'option': option_type, 'target_pos': (r, c)})
-        cost_hire = 20
+        cost_hire = 40
         current_money = self.white_money if self.turn == 'w' else self.black_money
         if current_money >= cost_hire:
             actions.append({'type': 'hire'})
@@ -282,9 +293,9 @@ class ChessGame:
             'p': 10, 'r': 30, 'n': 30, 'b': 30, 'q': 30, 'k': 0
         }
         self.buy_options = {
-            'normal': {'cost': 10, 'pieces': [('p', 0.90), ('r', 0.033), ('n', 0.033), ('b', 0.033), ('q', 0.001)]},
-            'rare': {'cost': 20, 'pieces': [('p', 0.50), ('r', 0.15), ('n', 0.15), ('b', 0.15), ('q', 0.05)]},
-            'epic': {'cost': 30, 'pieces': [('p', 0.10), ('r', 0.25), ('n', 0.25), ('b', 0.25), ('q', 0.15)]}
+            'normal': {'cost': 20, 'pieces': [('p', 0.90), ('r', 0.033), ('n', 0.033), ('b', 0.033), ('q', 0.001)]},
+            'rare': {'cost': 30, 'pieces': [('p', 0.50), ('r', 0.15), ('n', 0.15), ('b', 0.15), ('q', 0.05)]},
+            'epic': {'cost': 40, 'pieces': [('p', 0.10), ('r', 0.25), ('n', 0.25), ('b', 0.25), ('q', 0.15)]}
         }
         self.class_change_map = {
             'p': 'n', 'n': 'b', 'b': 'r',
@@ -467,12 +478,23 @@ class ChessGame:
         if captured_piece_full_name:
             captured_piece_type = captured_piece_full_name[1]
             if captured_piece_type == 'k':
-                reward = 10 
+                reward = 10
                 self.add_log_message(f"King captured!") # キング奪取のログ
                 self.set_dog_image('happy') # キング取ったらハッピー
             else:
-                reward = 1 
+                reward = 1
                 self.set_dog_image('move') # 駒を取る移動
+            # 敵陣地で駒を倒した場合のボーナス
+            in_enemy_territory = (
+                (self.turn == 'w' and er <= 2) or
+                (self.turn == 'b' and er >= self.ROWS - 3)
+            )
+            if in_enemy_territory:
+                if self.turn == 'w':
+                    self.white_money += 5
+                else:
+                    self.black_money += 5
+                self.add_log_message("Bonus +5G for attack!")
         else:
             self.set_dog_image('move') # 駒を取らない移動
 
@@ -539,7 +561,7 @@ class ChessGame:
         return False
 
     def hire_employee(self):
-        cost = 20
+        cost = 40
         current_money = self.white_money if self.turn == 'w' else self.black_money
         if current_money >= cost:
             if self.turn == 'w':
@@ -638,7 +660,7 @@ class ChessGame:
                                 possible_actions.append({'type': 'buy', 'option': option_type, 'target_pos': (r, c)})
 
         # 3. 従業員を雇用
-        cost_hire = 20
+        cost_hire = 40
         current_money = self.white_money if self.turn == 'w' else self.black_money
         if current_money >= cost_hire:
             possible_actions.append({'type': 'hire'})
