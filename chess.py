@@ -627,6 +627,43 @@ class ChessGame:
             self.winner = 'w'
         return 0
 
+    def get_possible_actions(self):
+        actions = []
+        for r in range(self.ROWS):
+            for c in range(self.COLS):
+                piece = self.board[r][c]
+                if piece and piece[0] == self.turn:
+                    for er in range(self.ROWS):
+                        for ec in range(self.COLS):
+                            if self.is_valid_move((r, c), (er, ec)):
+                                actions.append({'type': 'move', 'start': (r, c), 'end': (er, ec)})
+        for r in range(self.ROWS):
+            for c in range(self.COLS):
+                if self.board[r][c] == '':
+                    is_in_territory = False
+                    if self.turn == 'w' and r >= self.ROWS - 3:
+                        is_in_territory = True
+                    elif self.turn == 'b' and r <= 2:
+                        is_in_territory = True
+                    if is_in_territory:
+                        for option_type in self.buy_options.keys():
+                            cost = self.buy_options[option_type]['cost']
+                            current_money = self.white_money if self.turn == 'w' else self.black_money
+                            if current_money >= cost:
+                                actions.append({'type': 'buy', 'option': option_type, 'target_pos': (r, c)})
+        cost_hire = 40
+        current_money = self.white_money if self.turn == 'w' else self.black_money
+        if current_money >= cost_hire:
+            actions.append({'type': 'hire'})
+        cost_class_change = 70
+        if current_money >= cost_class_change:
+            for r in range(self.ROWS):
+                for c in range(self.COLS):
+                    piece = self.board[r][c]
+                    if piece and piece[0] == self.turn and piece[1] in self.class_change_map:
+                        actions.append({'type': 'class_change', 'pos': (r, c)})
+        return actions
+
     # --- AI: CPUのターン処理 ---
     def cpu_play_turn(self):
         self.set_dog_image('thinking')
