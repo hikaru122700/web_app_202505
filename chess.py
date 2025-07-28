@@ -51,7 +51,7 @@ class MCTSNode:
 # --- Advanced Chess Evaluator ---
 class AdvancedEvaluator:
     def __init__(self):
-        # 位置価値テーブル
+        # 位置価値テーブル（6x6専用）
         self.piece_square_tables = {
             'p': [  # ポーン
                 [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -128,13 +128,15 @@ class AdvancedEvaluator:
                     
                     base_value = piece_values.get(piece_type, 0)
                     
-                    # 位置ボーナス
+                    # 位置ボーナス（ボードサイズチェック付き）
+                    position_bonus = 0
                     if piece_type in self.piece_square_tables:
-                        position_bonus = self.piece_square_tables[piece_type][r][c]
-                        if piece_color == 'b':  # 黒の場合は反転
-                            position_bonus = self.piece_square_tables[piece_type][5-r][c]
-                    else:
-                        position_bonus = 0
+                        table = self.piece_square_tables[piece_type]
+                        if 0 <= r < len(table) and 0 <= c < len(table[0]):
+                            if piece_color == 'w':
+                                position_bonus = table[r][c]
+                            else:  # 黒の場合は反転
+                                position_bonus = table[len(table)-1-r][c]
                     
                     piece_score = base_value + position_bonus
                     
@@ -1038,13 +1040,14 @@ class ChessGame:
         try:
             # 動的なイテレーション数調整
             available_actions = SimGame(self).get_possible_actions()
-            iterations = min(200, max(50, len(available_actions) * 10))
+            iterations = min(80, max(25, len(available_actions) * 3))  # 最適化されたイテレーション数
             
+            print(f"CPU thinking... {len(available_actions)} actions, {iterations} iterations")
             mcts = MCTSPlayer(player=self.turn, iterations=iterations, exploration_weight=1.4)
             chosen_action = mcts.get_best_action(SimGame(self))
             
             if not chosen_action:
-                # フォールバック：簡単なヒューリスティック選択
+                print("MCTS returned no action, using fallback")
                 chosen_action = self.fallback_action_selection()
         except Exception as e:
             print(f"MCTS error: {e}, using fallback")
