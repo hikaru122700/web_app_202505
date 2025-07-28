@@ -137,6 +137,10 @@ class AdvancedEvaluator:
                                 position_bonus = table[r][c]
                             else:  # 黒の場合は反転
                                 position_bonus = table[len(table)-1-r][c]
+                        else:
+                            position_bonus = 0
+                    else:
+                        position_bonus = 0
                     
                     piece_score = base_value + position_bonus
                     
