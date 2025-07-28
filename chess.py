@@ -691,21 +691,15 @@ class ChessGame:
 
     # --- AI: CPUのターン処理 ---
     def cpu_play_turn(self):
+        """CPUのターン処理"""
         self.set_dog_image('thinking')
-        actions = self.get_possible_actions()
 
-        if not actions:
-            self.add_log_message(f"No valid actions for {'white' if self.turn == 'w' else 'black'} CPU.")
-            self.end_turn()
-            return
-
-        # --- CPU: Pure Alpha-Beta search ---
         def evaluate_state(state, player):
+            """評価関数の高速化版"""
             score = 0
             piece_count = 0
-            king_position = None
-
-            # 駒の価値と位置による評価
+            
+            # 駒の価値と位置による評価（簡略化）
             for r in range(state.ROWS):
                 for c in range(state.COLS):
                     piece = state.board[r][c]
@@ -713,100 +707,121 @@ class ChessGame:
                         if piece[0] == player:
                             piece_count += 1
                             val = state.piece_rewards.get(piece[1], 0)
-                            position_bonus = 0
+                            # 位置ボーナスを簡略化
                             if piece[1] == 'p':  # ポーン
-                                if player == 'w':
-                                    position_bonus = (state.ROWS - 1 - r) * 0.5
-                                else:
-                                    position_bonus = r * 0.5
+                                score += val + (state.ROWS - 1 - r if player == 'w' else r) * 0.3
                             elif piece[1] == 'k':  # キング
-                                king_position = (r, c)
-                                if player == 'w':
-                                    position_bonus = (state.ROWS - 1 - r) * 2
-                                else:
-                                    position_bonus = r * 2
-                            elif piece[1] in ['r', 'q']:  # ルークとクイーン
-                                center_distance = abs(c - state.COLS // 2)
-                                position_bonus = (state.COLS // 2 - center_distance) * 0.5
-                            score += val + position_bonus
+                                score += val + (state.ROWS - 1 - r if player == 'w' else r) * 1.5
+                            else:
+                                score += val
                         else:
                             val = state.piece_rewards.get(piece[1], 0)
                             score -= val
 
+            # 駒の効率ボーナス（簡略化）
             if piece_count > 0:
-                efficiency_bonus = piece_count * 0.5
-                score += efficiency_bonus
+                score += piece_count * 0.3
 
-            if king_position:
-                r, c = king_position
-                defense_score = 0
-                for dr in [-1, 0, 1]:
-                    for dc in [-1, 0, 1]:
-                        if dr == 0 and dc == 0: continue
-                        nr, nc = r + dr, c + dc
-                        if 0 <= nr < state.ROWS and 0 <= nc < state.COLS:
-                            piece = state.board[nr][nc]
-                            if piece and piece[0] == player:
-                                defense_score += 1
-                score += defense_score * 0.5
-
+            # 所持金の評価（簡略化）
             money_diff = state.white_money - state.black_money
-            score += money_diff if player == 'w' else -money_diff
+            score += (money_diff if player == 'w' else -money_diff) * 0.1
 
+            # ゲーム終了状態の評価
             if state.game_over:
-                if state.winner == player:
-                    score += 1000
-                elif state.winner and state.winner != player:
-                    score -= 1000
+                score += 1000 if state.winner == player else -1000
+
             return score
 
-        def alpha_beta(state, depth, alpha, beta, maximizing, player):
+        def alpha_beta(state, depth, alpha, beta, maximizing, player, transposition_table=None):
+            """アルファベータ探索の高速化版"""
+            if transposition_table is None:
+                transposition_table = {}
+
+            # 状態のハッシュを生成（簡略化）
+            state_hash = hash(str(state.board) + str(state.turn))
+            
+            # トランスポジションテーブルをチェック
+            if state_hash in transposition_table:
+                stored_depth, stored_value = transposition_table[state_hash]
+                if stored_depth >= depth:
+                    return stored_value
+
             if depth == 0 or state.game_over:
-                return evaluate_state(state, player)
-
-            actions = state.get_possible_actions()
-            if maximizing:
-                value = float('-inf')
-                for action in actions:
-                    sim = SimGame(state)
-                    sim.apply_action(action)
-                    value = max(value, alpha_beta(sim, depth - 1, alpha, beta, False, player))
-                    alpha = max(alpha, value)
-                    if alpha >= beta:
-                        break
-                return value
-            else:
-                value = float('inf')
-                for action in actions:
-                    sim = SimGame(state)
-                    sim.apply_action(action)
-                    value = min(value, alpha_beta(sim, depth - 1, alpha, beta, True, player))
-                    beta = min(beta, value)
-                    if beta <= alpha:
-                        break
+                value = evaluate_state(state, player)
+                transposition_table[state_hash] = (depth, value)
                 return value
 
-        def best_action(state, depth):
             actions = state.get_possible_actions()
-            if not actions: return None
-            best_val = float('-inf')
-            best_actions = []
+            if not actions:
+                value = evaluate_state(state, player)
+                transposition_table[state_hash] = (depth, value)
+                return value
+
+            # 行動を評価値で事前ソート（高速化）
+            action_values = []
             for action in actions:
                 sim = SimGame(state)
                 sim.apply_action(action)
-                val = alpha_beta(sim, depth - 1, float('-inf'), float('inf'), False, state.turn)
-                if val > best_val:
-                    best_val = val
-                    best_actions = [action]
-                elif val == best_val:
-                    best_actions.append(action)
+                val = evaluate_state(sim, player)
+                action_values.append((action, val))
+            
+            # 評価値でソート
+            action_values.sort(key=lambda x: x[1], reverse=maximizing)
+
+            if maximizing:
+                value = float('-inf')
+                for action, _ in action_values:
+                    sim = SimGame(state)
+                    sim.apply_action(action)
+                    value = max(value, alpha_beta(sim, depth - 1, alpha, beta, False, player, transposition_table))
+                    alpha = max(alpha, value)
+                    if alpha >= beta:
+                        break
+            else:
+                value = float('inf')
+                for action, _ in action_values:
+                    sim = SimGame(state)
+                    sim.apply_action(action)
+                    value = min(value, alpha_beta(sim, depth - 1, alpha, beta, True, player, transposition_table))
+                    beta = min(beta, value)
+                    if beta <= alpha:
+                        break
+
+            transposition_table[state_hash] = (depth, value)
+            return value
+
+        def best_action(state, depth):
+            """最善手の選択（高速化版）"""
+            actions = state.get_possible_actions()
+            if not actions:
+                return None
+
+            # トランスポジションテーブルを初期化
+            transposition_table = {}
+            
+            # 行動を評価値で事前ソート（高速化）
+            action_values = []
+            for action in actions:
+                sim = SimGame(state)
+                sim.apply_action(action)
+                val = alpha_beta(sim, depth - 1, float('-inf'), float('inf'), False, state.turn, transposition_table)
+                action_values.append((action, val))
+            
+            # 評価値でソート
+            action_values.sort(key=lambda x: x[1], reverse=True)
+            
+            # 最善の評価値を持つ行動を選択
+            best_val = action_values[0][1]
+            best_actions = [action for action, val in action_values if val == best_val]
+            
             return random.choice(best_actions)
 
-        chosen_action = best_action(SimGame(self), 3)
+        # 探索深度を4に調整（パフォーマンスと強さのバランス）
+        chosen_action = best_action(SimGame(self), 4)
         if not chosen_action:
-             self.add_log_message(f"CPU has no move.")
-             self.end_turn()
-             return
+            self.add_log_message(f"CPU has no move.")
+            self.end_turn()
+            return
 
         self.add_log_message(f"CPU chooses: {chosen_action['type']}")
 
