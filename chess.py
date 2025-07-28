@@ -3,6 +3,346 @@ import sys
 import os
 import random
 import time
+import math
+import copy
+
+# --- MCTS Node Class ---
+class MCTSNode:
+    def __init__(self, state, parent=None, action=None):
+        self.state = state
+        self.parent = parent
+        self.action = action
+        self.children = []
+        self.visits = 0
+        self.total_reward = 0.0
+        self.untried_actions = self.state.get_possible_actions()
+        
+    def is_fully_expanded(self):
+        return len(self.untried_actions) == 0
+    
+    def is_terminal(self):
+        return self.state.game_over or len(self.state.get_possible_actions()) == 0
+    
+    def ucb1_value(self, exploration_weight=1.4):
+        if self.visits == 0:
+            return float('inf')
+        
+        exploitation = self.total_reward / self.visits
+        exploration = math.sqrt(math.log(self.parent.visits) / self.visits)
+        return exploitation + exploration_weight * exploration
+    
+    def select_child(self, exploration_weight=1.4):
+        return max(self.children, key=lambda child: child.ucb1_value(exploration_weight))
+    
+    def expand(self):
+        if self.untried_actions:
+            action = self.untried_actions.pop()
+            new_state = copy.deepcopy(self.state)
+            new_state.apply_action(action)
+            child = MCTSNode(new_state, parent=self, action=action)
+            self.children.append(child)
+            return child
+        return None
+    
+    def update(self, reward):
+        self.visits += 1
+        self.total_reward += reward
+
+# --- Advanced Chess Evaluator ---
+class AdvancedEvaluator:
+    def __init__(self):
+        # 位置価値テーブル
+        self.piece_square_tables = {
+            'p': [  # ポーン
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.5, 0.5, 0.5, 0.5, 0.5, 0.5],
+                [0.1, 0.1, 0.2, 0.3, 0.1, 0.1],
+                [0.05, 0.05, 0.1, 0.25, 0.05, 0.05],
+                [0.0, 0.0, 0.0, 0.2, 0.0, 0.0],
+                [0.05, -0.05, -0.1, 0.0, -0.05, 0.05]
+            ],
+            'n': [  # ナイト
+                [-0.5, -0.4, -0.3, -0.3, -0.4, -0.5],
+                [-0.4, -0.2, 0.0, 0.0, -0.2, -0.4],
+                [-0.3, 0.0, 0.1, 0.15, 0.0, -0.3],
+                [-0.3, 0.05, 0.15, 0.2, 0.05, -0.3],
+                [-0.4, -0.2, 0.0, 0.05, -0.2, -0.4],
+                [-0.5, -0.4, -0.3, -0.3, -0.4, -0.5]
+            ],
+            'b': [  # ビショップ
+                [-0.2, -0.1, -0.1, -0.1, -0.1, -0.2],
+                [-0.1, 0.0, 0.0, 0.0, 0.0, -0.1],
+                [-0.1, 0.0, 0.05, 0.1, 0.0, -0.1],
+                [-0.1, 0.05, 0.05, 0.1, 0.05, -0.1],
+                [-0.1, 0.0, 0.1, 0.1, 0.0, -0.1],
+                [-0.2, -0.1, -0.1, -0.1, -0.1, -0.2]
+            ],
+            'r': [  # ルーク
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.05, 0.1, 0.1, 0.1, 0.1, 0.05],
+                [-0.05, 0.0, 0.0, 0.0, 0.0, -0.05],
+                [-0.05, 0.0, 0.0, 0.0, 0.0, -0.05],
+                [-0.05, 0.0, 0.0, 0.0, 0.0, -0.05],
+                [0.0, 0.0, 0.0, 0.05, 0.05, 0.0]
+            ],
+            'q': [  # クイーン
+                [-0.2, -0.1, -0.1, -0.05, -0.1, -0.2],
+                [-0.1, 0.0, 0.0, 0.0, 0.0, -0.1],
+                [-0.1, 0.0, 0.05, 0.05, 0.0, -0.1],
+                [-0.05, 0.0, 0.05, 0.05, 0.0, -0.05],
+                [0.0, 0.0, 0.05, 0.05, 0.0, -0.05],
+                [-0.2, -0.1, -0.1, -0.05, -0.1, -0.2]
+            ],
+            'k': [  # キング（中盤）
+                [-0.3, -0.4, -0.4, -0.5, -0.4, -0.3],
+                [-0.3, -0.4, -0.4, -0.5, -0.4, -0.3],
+                [-0.3, -0.4, -0.4, -0.5, -0.4, -0.3],
+                [-0.3, -0.4, -0.4, -0.5, -0.4, -0.3],
+                [-0.2, -0.3, -0.3, -0.4, -0.3, -0.2],
+                [-0.1, -0.2, -0.2, -0.2, -0.2, -0.1]
+            ]
+        }
+    
+    def get_game_phase(self, state):
+        total_pieces = sum(1 for r in range(state.ROWS) for c in range(state.COLS) if state.board[r][c])
+        if total_pieces > 20:
+            return "opening"
+        elif total_pieces > 10:
+            return "middle"
+        else:
+            return "endgame"
+    
+    def evaluate_position(self, state, player):
+        score = 0
+        phase = self.get_game_phase(state)
+        
+        # 駒の価値と位置評価
+        piece_values = {'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 100}
+        
+        for r in range(state.ROWS):
+            for c in range(state.COLS):
+                piece = state.board[r][c]
+                if piece:
+                    piece_type = piece[1]
+                    piece_color = piece[0]
+                    
+                    base_value = piece_values.get(piece_type, 0)
+                    
+                    # 位置ボーナス
+                    if piece_type in self.piece_square_tables:
+                        position_bonus = self.piece_square_tables[piece_type][r][c]
+                        if piece_color == 'b':  # 黒の場合は反転
+                            position_bonus = self.piece_square_tables[piece_type][5-r][c]
+                    else:
+                        position_bonus = 0
+                    
+                    piece_score = base_value + position_bonus
+                    
+                    if piece_color == player:
+                        score += piece_score
+                    else:
+                        score -= piece_score
+        
+        # 経済評価
+        money_diff = state.white_money - state.black_money
+        income_diff = state.white_income_per_turn - state.black_income_per_turn
+        
+        if player == 'w':
+            score += money_diff * 0.02 + income_diff * 0.5
+        else:
+            score -= money_diff * 0.02 + income_diff * 0.5
+        
+        # フェーズ別戦略
+        if phase == "opening":
+            score += self.evaluate_opening_strategy(state, player)
+        elif phase == "middle":
+            score += self.evaluate_middle_strategy(state, player)
+        else:
+            score += self.evaluate_endgame_strategy(state, player)
+        
+        # ゲーム終了評価
+        if state.game_over:
+            if state.winner == player:
+                score += 10000
+            else:
+                score -= 10000
+        
+        return score
+    
+    def evaluate_opening_strategy(self, state, player):
+        score = 0
+        # 中央制御の重要性
+        center_squares = [(2, 2), (2, 3), (3, 2), (3, 3)]
+        for r, c in center_squares:
+            piece = state.board[r][c]
+            if piece and piece[0] == player:
+                score += 0.3
+        
+        # 駒の展開
+        development_bonus = 0
+        for r in range(state.ROWS):
+            for c in range(state.COLS):
+                piece = state.board[r][c]
+                if piece and piece[0] == player and piece[1] in ['n', 'b']:
+                    if (player == 'w' and r < 4) or (player == 'b' and r > 1):
+                        development_bonus += 0.1
+        score += development_bonus
+        
+        return score
+    
+    def evaluate_middle_strategy(self, state, player):
+        score = 0
+        # 駒の活動性
+        mobility = len([action for action in state.get_possible_actions() if action['type'] == 'move'])
+        score += mobility * 0.05
+        
+        return score
+    
+    def evaluate_endgame_strategy(self, state, player):
+        score = 0
+        # キングの活性化
+        king_pos = None
+        for r in range(state.ROWS):
+            for c in range(state.COLS):
+                piece = state.board[r][c]
+                if piece and piece[0] == player and piece[1] == 'k':
+                    king_pos = (r, c)
+                    break
+        
+        if king_pos:
+            r, c = king_pos
+            # キングが中央に近いほど良い
+            center_distance = abs(r - 2.5) + abs(c - 2.5)
+            score += (5 - center_distance) * 0.1
+        
+        return score
+
+# --- MCTS Player ---
+class MCTSPlayer:
+    def __init__(self, player, iterations=1000, exploration_weight=1.4):
+        self.player = player
+        self.iterations = iterations
+        self.exploration_weight = exploration_weight
+        self.evaluator = AdvancedEvaluator()
+    
+    def get_best_action(self, state):
+        if not state.get_possible_actions():
+            return None
+        
+        root = MCTSNode(state)
+        
+        for _ in range(self.iterations):
+            # Selection
+            node = root
+            while not node.is_terminal() and node.is_fully_expanded():
+                node = node.select_child(self.exploration_weight)
+            
+            # Expansion
+            if not node.is_terminal() and not node.is_fully_expanded():
+                node = node.expand()
+            
+            # Simulation
+            reward = self.simulate(node.state)
+            
+            # Backpropagation
+            while node is not None:
+                node.update(reward)
+                node = node.parent
+        
+        # 最も訪問回数の多い子ノードの行動を選択
+        if root.children:
+            best_child = max(root.children, key=lambda child: child.visits)
+            return best_child.action
+        return None
+    
+    def simulate(self, state):
+        sim_state = copy.deepcopy(state)
+        max_depth = 5  # 深度を制限してパフォーマンス向上
+        depth = 0
+        
+        while not sim_state.game_over and depth < max_depth:
+            actions = sim_state.get_possible_actions()
+            if not actions:
+                break
+            
+            # 確率的行動（駒購入）の期待値計算
+            action = self.select_simulation_action(sim_state, actions)
+            sim_state.apply_action(action)
+            depth += 1
+        
+        return self.evaluator.evaluate_position(sim_state, self.player)
+    
+    def select_simulation_action(self, state, actions):
+        # パフォーマンス向上のための行動数制限
+        if len(actions) > 15:
+            # 行動を重要度で事前フィルタリング
+            priority_actions = []
+            for action in actions:
+                if action['type'] == 'move':
+                    target_pos = action['end']
+                    if state.board[target_pos[0]][target_pos[1]]:  # 駒を取る手
+                        priority_actions.append(action)
+                elif action['type'] in ['buy', 'hire', 'class_change']:
+                    priority_actions.append(action)
+            
+            # 優先度の高い行動がない場合は通常の移動から選択
+            if not priority_actions:
+                move_actions = [a for a in actions if a['type'] == 'move']
+                actions = random.sample(move_actions, min(10, len(move_actions)))
+            else:
+                actions = priority_actions[:10]
+        
+        # 行動タイプ別の重み付け
+        weighted_actions = []
+        
+        for action in actions:
+            weight = 1.0
+            
+            if action['type'] == 'move':
+                # 駒を取る手は高い重み
+                target_pos = action['end']
+                if state.board[target_pos[0]][target_pos[1]]:
+                    weight = 3.0
+                else:
+                    weight = 1.0
+            elif action['type'] == 'buy':
+                # 駒購入の期待値計算
+                weight = self.calculate_buy_expected_value(state, action)
+            elif action['type'] == 'hire':
+                # 長期投資として中程度の重み
+                weight = 1.5
+            elif action['type'] == 'class_change':
+                # 駒のアップグレードは高い重み
+                weight = 2.0
+            
+            weighted_actions.append((action, weight))
+        
+        # 重み付き選択
+        total_weight = sum(weight for _, weight in weighted_actions)
+        r = random.uniform(0, total_weight)
+        
+        cumulative_weight = 0
+        for action, weight in weighted_actions:
+            cumulative_weight += weight
+            if r <= cumulative_weight:
+                return action
+        
+        return actions[-1]  # フォールバック
+    
+    def calculate_buy_expected_value(self, state, action):
+        option = action['option']
+        buy_option = state.buy_options[option]
+        pieces = buy_option['pieces']
+        
+        expected_value = 0
+        piece_values = {'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9}
+        
+        for piece_type, probability in pieces:
+            expected_value += piece_values.get(piece_type, 0) * probability
+        
+        # コストを考慮した期待値
+        cost = buy_option['cost']
+        return max(0.1, expected_value - cost * 0.1)
 
 # --- Monte Carlo simulation helper ---
 class SimGame:
@@ -691,133 +1031,25 @@ class ChessGame:
 
     # --- AI: CPUのターン処理 ---
     def cpu_play_turn(self):
-        """CPUのターン処理"""
+        """CPUのターン処理 - ハイブリッドMCTS実装"""
         self.set_dog_image('thinking')
-
-        def evaluate_state(state, player):
-            """評価関数の高速化版"""
-            score = 0
-            piece_count = 0
+        
+        # 時間制約によるタイムアウト機能付きMCTS
+        try:
+            # 動的なイテレーション数調整
+            available_actions = SimGame(self).get_possible_actions()
+            iterations = min(200, max(50, len(available_actions) * 10))
             
-            # 駒の価値と位置による評価（簡略化）
-            for r in range(state.ROWS):
-                for c in range(state.COLS):
-                    piece = state.board[r][c]
-                    if piece:
-                        if piece[0] == player:
-                            piece_count += 1
-                            val = state.piece_rewards.get(piece[1], 0)
-                            # 位置ボーナスを簡略化
-                            if piece[1] == 'p':  # ポーン
-                                score += val + (state.ROWS - 1 - r if player == 'w' else r) * 0.3
-                            elif piece[1] == 'k':  # キング
-                                score += val + (state.ROWS - 1 - r if player == 'w' else r) * 1.5
-                            else:
-                                score += val
-                        else:
-                            val = state.piece_rewards.get(piece[1], 0)
-                            score -= val
-
-            # 駒の効率ボーナス（簡略化）
-            if piece_count > 0:
-                score += piece_count * 0.3
-
-            # 所持金の評価（簡略化）
-            money_diff = state.white_money - state.black_money
-            score += (money_diff if player == 'w' else -money_diff) * 0.1
-
-            # ゲーム終了状態の評価
-            if state.game_over:
-                score += 1000 if state.winner == player else -1000
-
-            return score
-
-        def alpha_beta(state, depth, alpha, beta, maximizing, player, transposition_table=None):
-            """アルファベータ探索の高速化版"""
-            if transposition_table is None:
-                transposition_table = {}
-
-            # 状態のハッシュを生成（簡略化）
-            state_hash = hash(str(state.board) + str(state.turn))
+            mcts = MCTSPlayer(player=self.turn, iterations=iterations, exploration_weight=1.4)
+            chosen_action = mcts.get_best_action(SimGame(self))
             
-            # トランスポジションテーブルをチェック
-            if state_hash in transposition_table:
-                stored_depth, stored_value = transposition_table[state_hash]
-                if stored_depth >= depth:
-                    return stored_value
-
-            if depth == 0 or state.game_over:
-                value = evaluate_state(state, player)
-                transposition_table[state_hash] = (depth, value)
-                return value
-
-            actions = state.get_possible_actions()
-            if not actions:
-                value = evaluate_state(state, player)
-                transposition_table[state_hash] = (depth, value)
-                return value
-
-            # 行動を評価値で事前ソート（高速化）
-            action_values = []
-            for action in actions:
-                sim = SimGame(state)
-                sim.apply_action(action)
-                val = evaluate_state(sim, player)
-                action_values.append((action, val))
-            
-            # 評価値でソート
-            action_values.sort(key=lambda x: x[1], reverse=maximizing)
-
-            if maximizing:
-                value = float('-inf')
-                for action, _ in action_values:
-                    sim = SimGame(state)
-                    sim.apply_action(action)
-                    value = max(value, alpha_beta(sim, depth - 1, alpha, beta, False, player, transposition_table))
-                    alpha = max(alpha, value)
-                    if alpha >= beta:
-                        break
-            else:
-                value = float('inf')
-                for action, _ in action_values:
-                    sim = SimGame(state)
-                    sim.apply_action(action)
-                    value = min(value, alpha_beta(sim, depth - 1, alpha, beta, True, player, transposition_table))
-                    beta = min(beta, value)
-                    if beta <= alpha:
-                        break
-
-            transposition_table[state_hash] = (depth, value)
-            return value
-
-        def best_action(state, depth):
-            """最善手の選択（高速化版）"""
-            actions = state.get_possible_actions()
-            if not actions:
-                return None
-
-            # トランスポジションテーブルを初期化
-            transposition_table = {}
-            
-            # 行動を評価値で事前ソート（高速化）
-            action_values = []
-            for action in actions:
-                sim = SimGame(state)
-                sim.apply_action(action)
-                val = alpha_beta(sim, depth - 1, float('-inf'), float('inf'), False, state.turn, transposition_table)
-                action_values.append((action, val))
-            
-            # 評価値でソート
-            action_values.sort(key=lambda x: x[1], reverse=True)
-            
-            # 最善の評価値を持つ行動を選択
-            best_val = action_values[0][1]
-            best_actions = [action for action, val in action_values if val == best_val]
-            
-            return random.choice(best_actions)
-
-        # 探索深度を4に調整（パフォーマンスと強さのバランス）
-        chosen_action = best_action(SimGame(self), 4)
+            if not chosen_action:
+                # フォールバック：簡単なヒューリスティック選択
+                chosen_action = self.fallback_action_selection()
+        except Exception as e:
+            print(f"MCTS error: {e}, using fallback")
+            chosen_action = self.fallback_action_selection()
+        
         if not chosen_action:
             self.add_log_message(f"CPU has no move.")
             self.end_turn()
@@ -833,6 +1065,37 @@ class ChessGame:
             self.hire_employee()
         elif chosen_action['type'] == 'class_change':
             self.class_change(chosen_action['pos'])
+    
+    def fallback_action_selection(self):
+        """MCTSが失敗した場合のフォールバック行動選択"""
+        actions = self.get_possible_actions()
+        if not actions:
+            return None
+        
+        # 優先順位付きの行動選択
+        capture_moves = []
+        economic_actions = []
+        regular_moves = []
+        
+        for action in actions:
+            if action['type'] == 'move':
+                target_pos = action['end']
+                if self.board[target_pos[0]][target_pos[1]]:
+                    capture_moves.append(action)
+                else:
+                    regular_moves.append(action)
+            elif action['type'] in ['buy', 'hire', 'class_change']:
+                economic_actions.append(action)
+        
+        # 駒を取る手 > 経済行動 > 通常の移動
+        if capture_moves:
+            return random.choice(capture_moves)
+        elif economic_actions and random.random() < 0.3:  # 30%の確率で経済行動
+            return random.choice(economic_actions)
+        elif regular_moves:
+            return random.choice(regular_moves)
+        else:
+            return random.choice(actions)
 
 # --- メインゲームループの関数 ---
 def run_chess_game():
