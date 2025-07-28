@@ -130,9 +130,12 @@ class AdvancedEvaluator:
                     
                     # 位置ボーナス
                     if piece_type in self.piece_square_tables:
-                        position_bonus = self.piece_square_tables[piece_type][r][c]
-                        if piece_color == 'b':  # 黒の場合は反転
-                            position_bonus = self.piece_square_tables[piece_type][5-r][c]
+                        if c < len(self.piece_square_tables[piece_type][r]):  # Ensure c is within bounds
+                            position_bonus = self.piece_square_tables[piece_type][r][c]
+                            if piece_color == 'b':  # 黒の場合は反転
+                                position_bonus = self.piece_square_tables[piece_type][5-r][c]
+                        else:
+                            position_bonus = 0
                     else:
                         position_bonus = 0
                     
